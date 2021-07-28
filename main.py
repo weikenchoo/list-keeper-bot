@@ -41,9 +41,6 @@ def write_data(chatId,listName,newEntry=None):
     with open(path, "w") as write_file:
         json.dump(data, write_file)
 
-    
-
-    
 
 def remove_data(chatId,listName,removeItem):
     path = data_dir + str(chatId) + ".json"
@@ -98,22 +95,6 @@ def get_items_markup(chat_id,targetList):
     markup.keyboard = kbList
     return markup
 
-@bot.message_handler(commands=['test'])
-def test(message):
-    chat_id = message.chat.id
-    markup = types.ForceReply()
-    msg = bot.send_message(chat_id, "Enter something other than text i dare you fcker.", reply_markup=markup)
-    bot.register_next_step_handler(msg, test_input)
-
-def test_input(message):
-    if message.text:
-        print(message.text)
-        bot.send_message(message.chat.id,"Testing here")
-    else:
-        bot.send_message(message.chat.id,"I only support text la babi.")
-        markup = types.ForceReply()
-        msg = bot.send_message(message.chat.id, "Enter something other than text i dare you fcker.", reply_markup=markup)
-        bot.register_next_step_handler(msg, test_input) 
 
 def getItems(chatId,targetList):
     data = read_data(chatId)
@@ -130,14 +111,6 @@ def getItems(chatId,targetList):
         return False
 
     return all_items
-        
-
-
-
-@bot.message_handler(commands=['start', 'help',])
-def send_welcome(message):
-    bot.send_message(message.chat.id,"Hi "+message.from_user.first_name)
-    # bot.reply_to(message, "Howdy, how are you doing?")
 
 
 @bot.message_handler(commands=['add'])
@@ -327,9 +300,5 @@ def choose_random(message):
 
         
         
-        
-
-
-
 
 bot.polling()
