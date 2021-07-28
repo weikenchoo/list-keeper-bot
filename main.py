@@ -12,6 +12,9 @@ bot = telebot.TeleBot(token, parse_mode=None)
 data_dir = "data/"
 
 def read_data(chatId):
+    if not os.path.isdir(data_dir):
+        os.mkdir(data_dir)
+    
     path = data_dir + str(chatId) + ".json"
     
     if os.path.isfile(path):
