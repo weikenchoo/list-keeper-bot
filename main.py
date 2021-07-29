@@ -27,8 +27,7 @@ def read_data(chatId):
     
     return data
 
-def write_data(chatId,listName,newEntry=None):
-    path = data_dir + str(chatId) + ".json"
+def add_to_dict(chatId,listName,newEntry=None):
     data = read_data(chatId=chatId)
     if listName in data:
         data[listName].append(newEntry)
@@ -37,13 +36,15 @@ def write_data(chatId,listName,newEntry=None):
         if not newEntry:
             data[listName] = []
             bot.send_message(chatId,"Created list called "+ listName +".")
+    save_data(chatId,data)
     
+
+def save_data(chatId,data):
+    path = data_dir + str(chatId) + ".json"
     with open(path, "w") as write_file:
         json.dump(data, write_file)
 
-
 def remove_data(chatId,listName,removeItem):
-    path = data_dir + str(chatId) + ".json"
     data = read_data(chatId)
     if data:
         if listName in data:
@@ -52,9 +53,7 @@ def remove_data(chatId,listName,removeItem):
                 bot.send_message(chatId,"Successfully removed " + removeItem + " from "+ listName + ".")
             else:
                 bot.send_message(chatId,"No such item in the list.")
-
-    with open(path, "w") as write_file:
-        json.dump(data, write_file)
+    save_data(chatId,data)
 
 def get_lists_markup(chatId):
     data = read_data(chatId)
@@ -98,10 +97,8 @@ def get_items_markup(chat_id,targetList):
 
 def getItems(chatId,targetList):
     data = read_data(chatId)
-
     if data:
         all_items = ""
-
         if targetList in data:
             for items in data[targetList]:
                 all_items += "- "+ items + "\n"
@@ -114,11 +111,14 @@ def getItems(chatId,targetList):
 
 
 @bot.message_handler(commands=['add'])
-def add(message):
+def list_to_add(message):
     chat_id = message.chat.id
     markup = get_lists_markup(chat_id)
-    msg = bot.send_message(chat_id, "Choose your list:", reply_markup=markup)
-    bot.register_next_step_handler(msg, nameItem)
+    if markup.keyboard:
+        msg = bot.send_message(chat_id, "Choose your list:", reply_markup=markup)
+        bot.register_next_step_handler(msg, nameItem)
+    else:
+        bot.send_message(chat_id,"You have not created a list.")
 
 def nameItem(message):
     chat_id = message.chat.id
@@ -140,7 +140,7 @@ def nameItem(message):
 def saveToList(message,targetList):
     chat_id = message.chat.id
     if message.text:
-        write_data(chat_id,targetList,message.text)
+        add_to_dict(chat_id,targetList,message.text)
     else:
         bot.send_message(chat_id,"Sorry, I only support text and emojis.")
         markup = types.ForceReply()
@@ -149,11 +149,14 @@ def saveToList(message,targetList):
 
 
 @bot.message_handler(commands=['remove'])
-def remove(message):
+def list_to_remove(message):
     chat_id = message.chat.id
     markup = get_lists_markup(chat_id)
-    msg = bot.send_message(chat_id, "Choose your list:", reply_markup=markup)
-    bot.register_next_step_handler(msg, itemFromList)
+    if markup.keyboard:
+        msg = bot.send_message(chat_id, "Choose your list:", reply_markup=markup)
+        bot.register_next_step_handler(msg, itemFromList)
+    else:
+        bot.send_message(chat_id,"You have not created a list.")
 
 def itemFromList(message):
     chat_id = message.chat.id
@@ -202,7 +205,7 @@ def newList(message):
         if targetList in data:
             bot.send_message(chat_id,"This list already exists.")
         else:
-            write_data(chat_id,targetList)
+            add_to_dict(chat_id,targetList)
     else:
         bot.send_message(chat_id,"Sorry, I only support text and emojis.")
         markup = types.ForceReply()
@@ -211,22 +214,23 @@ def newList(message):
 
 
 @bot.message_handler(commands=['delete'])
-def delete(message):
+def list_to_delete(message):
     chat_id = message.chat.id
     markup = get_lists_markup(chat_id)
-    msg = bot.send_message(chat_id, "Choose list to be deleted.", reply_markup=markup)
-    bot.register_next_step_handler(msg,deleteList)
+    if markup.keyboard:
+        msg = bot.send_message(chat_id, "Choose list to be deleted.", reply_markup=markup)
+        bot.register_next_step_handler(msg,deleteList)
+    else:
+        bot.send_message(chat_id,"You have not created a list.")
 
 def deleteList(message):
     chat_id = message.chat.id
     if message.text:
-        path = data_dir + str(chat_id) + ".json"
         data = read_data(chat_id)
         targetList = message.text
         if targetList in data:
             data.pop(targetList)
-            with open(path, "w") as write_file:
-                json.dump(data, write_file)
+            save_data(chat_id,data)
             bot.send_message(chat_id,targetList+" has been deleted.")
         else:
             bot.send_message(chat_id,targetList+" does not exist.")
@@ -238,7 +242,7 @@ def deleteList(message):
 
 
 @bot.message_handler(commands=['show'])
-def show(message):
+def list_to_show(message):
     chat_id = message.chat.id
     markup = get_lists_markup(chat_id)
     data = read_data(chat_id)
@@ -290,14 +294,69 @@ def all(message):
 
 
 @bot.message_handler(commands=['random'])
-def choose_random(message):
+def list_to_random(message):
     chat_id = message.chat.id
-    data = read_data(chat_id)
-    random_list = random.choice(list(data))
-    random_item = random.choice(data[random_list])
-    bot.send_message(chat_id,random_item + " from " + random_list + ".")
-    
+    markup = get_lists_markup(chat_id)
+    if markup.keyboard:
+        msg = bot.send_message(chat_id,"Select the list you want to randomly chose from.",reply_markup=markup)
+        bot.register_next_step_handler(msg,chooseRandom)
+    else:
+        bot.send_message(chat_id,"You have not created a list.")
 
+def chooseRandom(message):
+    chat_id = message.chat.id
+    if message.text:
+        targetList = message.text
+        data = read_data(chat_id)
+        if targetList in data: 
+            if data[targetList]:
+                random_item = random.choice(data[targetList])
+                bot.send_message(chat_id,"- " + random_item)
+            else:
+                bot.send_message(chat_id,"This list is empty.")
+        else:
+            bot.send_message(chat_id,"This list does not exists.")
+    else:
+        markup = get_lists_markup(chat_id)
+        if markup.keyboard:
+            bot.send_message(chat_id,"Sorry, I only support text and emojis.")
+            msg = bot.send_message(chat_id,"Select the list you want to randomly chose from.",reply_markup=markup)
+            bot.register_next_step_handler(msg,chooseRandom)
+
+
+
+@bot.message_handler(commands=['clear'])
+def list_to_clear(message):
+    chat_id = message.chat.id
+    markup  = get_lists_markup(chat_id)
+    if markup.keyboard:
+        msg = bot.send_message(chat_id,"Select the list you want to clear.",reply_markup=markup)
+        bot.register_next_step_handler(msg,clearList)
+    else:
+        bot.send_message(chat_id,"You have not created a list.")
+
+
+def clearList(message):
+    chat_id = message.chat.id
+    if message.text:
+        targetList = message.text
+        data = read_data(chat_id)
+        if targetList in data:
+            if data[targetList]:
+                data[targetList] = []
+                save_data(chat_id,data)
+                bot.send_message(chat_id,"The list has been cleared.")
+            else:
+                bot.send_message(chat_id,"This list is already empty.")
+        else:
+            bot.send_message(chat_id,"This list does not exists.")
+    else:
+        bot.send_message(chat_id,"Sorry, I only support text and emojis.")
+        markup  = get_lists_markup(chat_id)
+        if markup.keyboard:
+            msg = bot.send_message(chat_id,"Select the list you want to clear.",reply_markup=markup)
+            bot.register_next_step_handler(msg,clearList)
+        
         
         
 
