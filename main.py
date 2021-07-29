@@ -11,11 +11,11 @@ bot = telebot.TeleBot(token, parse_mode=None)
 
 data_dir = "data/"
 
-def read_data(chatId):
+def read_data(chat_id):
     if not os.path.isdir(data_dir):
         os.mkdir(data_dir)
     
-    path = data_dir + str(chatId) + ".json"
+    path = data_dir + str(chat_id) + ".json"
     
     if os.path.isfile(path):
         with open(path, "r") as read_file:
@@ -27,36 +27,36 @@ def read_data(chatId):
     
     return data
 
-def add_to_dict(chatId,listName,newEntry=None):
-    data = read_data(chatId=chatId)
+def add_to_dict(chat_id,listName,newEntry=None):
+    data = read_data(chat_id=chat_id)
     if listName in data:
         data[listName].append(newEntry)
-        bot.send_message(chatId,"Added " + newEntry + " into " + listName + ".")
+        bot.send_message(chat_id,"Added " + newEntry + " into " + listName + ".")
     else:
         if not newEntry:
             data[listName] = []
-            bot.send_message(chatId,"Created list called "+ listName +".")
-    save_data(chatId,data)
+            bot.send_message(chat_id,"Created list called "+ listName +".")
+    save_data(chat_id,data)
     
 
-def save_data(chatId,data):
-    path = data_dir + str(chatId) + ".json"
+def save_data(chat_id,data):
+    path = data_dir + str(chat_id) + ".json"
     with open(path, "w") as write_file:
         json.dump(data, write_file)
 
-def remove_data(chatId,listName,removeItem):
-    data = read_data(chatId)
+def remove_data(chat_id,listName,removeItem):
+    data = read_data(chat_id)
     if data:
         if listName in data:
             if removeItem in data[listName]:
                 data[listName].remove(removeItem)
-                bot.send_message(chatId,"Successfully removed " + removeItem + " from "+ listName + ".")
+                bot.send_message(chat_id,"Successfully removed " + removeItem + " from "+ listName + ".")
             else:
-                bot.send_message(chatId,"No such item in the list.")
-    save_data(chatId,data)
+                bot.send_message(chat_id,"No such item in the list.")
+    save_data(chat_id,data)
 
-def get_lists_markup(chatId):
-    data = read_data(chatId)
+def get_lists_markup(chat_id):
+    data = read_data(chat_id)
     markup = types.ReplyKeyboardMarkup(one_time_keyboard=True)
     kbList = []
     new_row = []
@@ -95,8 +95,8 @@ def get_items_markup(chat_id,targetList):
     return markup
 
 
-def getItems(chatId,targetList):
-    data = read_data(chatId)
+def getItems(chat_id,targetList):
+    data = read_data(chat_id)
     if data:
         all_items = ""
         if targetList in data:
@@ -108,6 +108,22 @@ def getItems(chatId,targetList):
         return False
 
     return all_items
+
+@bot.message_handler(commands=['start'])
+def start(message):
+    bot.send_message(message.chat.id,
+    """
+    Here are all the available commands:
+    /new - Create a new list.
+    /delete - Delete an existing list.
+    /clear - Clear all items from an existing list.
+    /add - Add an item to an existing list.
+    /remove - Remove an item from an existing list.
+    /show - Show all items from an existing list.
+    /all - Show all items from all existing lists.
+    /random - Will return a random item from an existing list.
+    
+    """)
 
 
 @bot.message_handler(commands=['add'])
